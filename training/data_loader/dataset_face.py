@@ -20,7 +20,7 @@ class GFPGAN_degradation(object):
         self.downsample_range = [0.8, 8]
         self.noise_range = [0, 20]
         self.jpeg_range = [60, 100]
-        self.gray_prob = 0.2
+        self.gray_prob = 0.3
         self.color_jitter_prob = 0.0
         self.color_jitter_pt_prob = 0.0
         self.shift = 20/255.
