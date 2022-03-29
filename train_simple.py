@@ -348,29 +348,30 @@ if __name__ == '__main__':
 
     args.start_iter = 0
 
-    # generator = FullGenerator(
-    #     args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow,
-    #     device=device
-    # ).to(device)
-    # discriminator = Discriminator(
-    #     args.size, channel_multiplier=args.channel_multiplier, narrow=args.narrow, device=device
-    # ).to(device)
-    # g_ema = FullGenerator(
-    #     args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow,
-    #     device=device
-    # ).to(device)
-    # g_ema.eval()
-
     generator = FullGenerator(
-       args.size, args.latent, args.n_mlp, channel_multiplier=1, narrow=0.5, device=device
+        args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow,
+        device=device
     ).to(device)
     discriminator = Discriminator(
-       args.size, channel_multiplier=1, narrow=1, device=device
+        args.size, channel_multiplier=args.channel_multiplier, narrow=args.narrow, device=device
     ).to(device)
     g_ema = FullGenerator(
-       args.size, args.latent, args.n_mlp, channel_multiplier=1, narrow=0.5, device=device
+        args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow,
+        device=device
     ).to(device)
     g_ema.eval()
+
+    #generator = FullGenerator(
+    #   args.size, args.latent, args.n_mlp, channel_multiplier=1, narrow=0.5, device=device
+    #).to(device)
+    #discriminator = Discriminator(
+    #   args.size, channel_multiplier=1, narrow=1, device=device
+    #).to(device)
+    #g_ema = FullGenerator(
+    #   args.size, args.latent, args.n_mlp, channel_multiplier=1, narrow=0.5, device=device
+    #).to(device)
+    #g_ema.eval()
+    
     accumulate(g_ema, generator, 0)
 
     g_reg_ratio = args.g_reg_every / (args.g_reg_every + 1)
