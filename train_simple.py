@@ -93,6 +93,16 @@ def g_nonsaturating_loss(fake_pred, loss_funcs=None, fake_img=None, real_img=Non
     return loss
 
 
+def print_losses(fake_pred, loss_funcs=None, fake_img=None, real_img=None, input_img=None):
+    smooth_l1_loss, id_loss = loss_funcs
+
+    loss = F.softplus(-fake_pred).mean()
+    loss_l1 = smooth_l1_loss(fake_img, real_img)
+    loss_id, __, __ = id_loss(fake_img, real_img, input_img)
+
+    print(f"L1 Loss : {loss_l1} ID Loss : {loss_id}")
+
+
 def g_path_regularize(fake_img, latents, mean_path_length, decay=0.01):
     noise = torch.randn_like(fake_img) / math.sqrt(
         fake_img.shape[2] * fake_img.shape[3]
@@ -260,7 +270,7 @@ def train(args, loader, generator, discriminator, losses, g_optim, d_optim, g_em
         if get_rank() == 0:
             pbar.set_description(
                 (
-                    f'd: {d_loss_val:.4f}; g: {g_loss_val:.4f}; r1: {r1_val:.4f}; '
+                    f'd: {d_loss_val:.4f}; g: {g_loss_val:.4f}; r1: {r1_val:.4f}; path_loss_val: {path_loss_val:.4f}; real_score_val: {real_score_val:.4f}; fake_score_val: {fake_score_val:.4f}; path_length_val: {path_length_val:.4f}; '
                 )
             )
             
@@ -279,6 +289,7 @@ def train(args, loader, generator, discriminator, losses, g_optim, d_optim, g_em
 
                 lpips_value = validation(g_ema, lpips_func, args, device)
                 print(f'{i}/{args.iter}: lpips: {lpips_value.cpu().numpy()[0][0][0][0]}')
+                print_losses(fake_pred, losses, fake_img, real_img, degraded_img)
 
             if i and i % args.save_freq == 0:
                 torch.save(
@@ -337,14 +348,27 @@ if __name__ == '__main__':
 
     args.start_iter = 0
 
+    # generator = FullGenerator(
+    #     args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow,
+    #     device=device
+    # ).to(device)
+    # discriminator = Discriminator(
+    #     args.size, channel_multiplier=args.channel_multiplier, narrow=args.narrow, device=device
+    # ).to(device)
+    # g_ema = FullGenerator(
+    #     args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow,
+    #     device=device
+    # ).to(device)
+    # g_ema.eval()
+
     generator = FullGenerator(
-        args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow, device=device
+       args.size, args.latent, args.n_mlp, channel_multiplier=1, narrow=0.5, device=device
     ).to(device)
     discriminator = Discriminator(
-        args.size, channel_multiplier=args.channel_multiplier, narrow=args.narrow, device=device
+       args.size, channel_multiplier=1, narrow=1, device=device
     ).to(device)
     g_ema = FullGenerator(
-        args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier, narrow=args.narrow, device=device
+       args.size, args.latent, args.n_mlp, channel_multiplier=1, narrow=0.5, device=device
     ).to(device)
     g_ema.eval()
     accumulate(g_ema, generator, 0)
@@ -367,14 +391,26 @@ if __name__ == '__main__':
     if args.pretrain is not None:
         print('load model:', args.pretrain)
         
-        ckpt = torch.load(args.pretrain)
+        #ckpt = torch.load("weights/Yeni klasör (28)/400000.pth")
 
-        generator.load_state_dict(ckpt['g'])
-        discriminator.load_state_dict(ckpt['d'])
-        g_ema.load_state_dict(ckpt['g_ema'])
+        g_dict = torch.load("weights/GPEN-BFR-512.pth")
+        d_dict = torch.load("weights/GPEN-BFR-512-D.pth")
+
+        generator.load_state_dict(g_dict)
+        discriminator.load_state_dict(d_dict)
+        #g_ema.load_state_dict(ckpt['g_ema'])
+
+        #g_optim.load_state_dict(ckpt['g_optim'])
+        #d_optim.load_state_dict(ckpt['d_optim'])
+        
+        #ckpt = torch.load(args.pretrain)
+
+        #generator.load_state_dict(ckpt['g'])
+        #discriminator.load_state_dict(ckpt['d'])
+        #g_ema.load_state_dict(ckpt['g_ema'])
             
-        g_optim.load_state_dict(ckpt['g_optim'])
-        d_optim.load_state_dict(ckpt['d_optim'])
+        #g_optim.load_state_dict(ckpt['g_optim'])
+        #d_optim.load_state_dict(ckpt['d_optim'])
     
     smooth_l1_loss = torch.nn.SmoothL1Loss().to(device)
     id_loss = IDLoss(args.base_dir, device, ckpt_dict=None)
