@@ -75,7 +75,7 @@ class FaceDataset(Dataset):
     def __init__(self, path, resolution=512):
         self.resolution = resolution
 
-        self.HQ_imgs = glob.glob(os.path.join(path, '*.*'))
+        self.HQ_imgs = np.load(path)["images"]
         self.length = len(self.HQ_imgs)
 
         self.degrader = GFPGAN_degradation()
@@ -84,7 +84,7 @@ class FaceDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-        img_gt = cv2.imread(self.HQ_imgs[index], cv2.IMREAD_COLOR)
+        img_gt = self.HQ_imgs[index]
         img_gt = cv2.resize(img_gt, (self.resolution, self.resolution), interpolation=cv2.INTER_AREA)
         
         # BFR degradation
@@ -93,8 +93,8 @@ class FaceDataset(Dataset):
         img_gt = img_gt.astype(np.float32)/255.
         img_gt, img_lq = self.degrader.degrade_process(img_gt)
 
-        img_gt =  (torch.from_numpy(img_gt) - 0.5) / 0.5
-        img_lq =  (torch.from_numpy(img_lq) - 0.5) / 0.5
+        img_gt = (torch.from_numpy(img_gt) - 0.5) / 0.5
+        img_lq = (torch.from_numpy(img_lq) - 0.5) / 0.5
         
         img_gt = img_gt.permute(2, 0, 1).flip(0) # BGR->RGB
         img_lq = img_lq.permute(2, 0, 1).flip(0) # BGR->RGB
