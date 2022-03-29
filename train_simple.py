@@ -22,7 +22,9 @@ from torchvision import transforms, utils
 
 import __init_paths
 from training.data_loader.dataset_face import FaceDataset
+print("before line 25")
 from face_model.gpen_model import FullGenerator, Discriminator
+print("after line 25")
 
 from training.loss.id_loss import IDLoss
 from distributed import (
