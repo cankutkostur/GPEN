@@ -305,6 +305,8 @@ def train(args, loader, generator, discriminator, losses, g_optim, d_optim, g_em
 
 
 if __name__ == '__main__':
+    
+    print("Starting...")
 
     parser = argparse.ArgumentParser()
 
