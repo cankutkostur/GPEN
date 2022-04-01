@@ -22,9 +22,7 @@ from torchvision import transforms, utils
 
 import __init_paths
 from training.data_loader.dataset_face import FaceDataset
-print("before line 25")
 from face_model.gpen_model import FullGenerator, Discriminator
-print("after line 25")
 
 from training.loss.id_loss import IDLoss
 from distributed import (
@@ -396,26 +394,21 @@ if __name__ == '__main__':
     if args.pretrain is not None:
         print('load model:', args.pretrain)
         
-        #ckpt = torch.load("weights/Yeni klasör (28)/400000.pth")
+        if args.pretrain == "base":
+            g_dict = torch.load("weights/GPEN-BFR-512.pth")
+            d_dict = torch.load("weights/GPEN-BFR-512-D.pth")
 
-        #g_dict = torch.load("weights/GPEN-BFR-512.pth")
-        #d_dict = torch.load("weights/GPEN-BFR-512-D.pth")
+            generator.load_state_dict(g_dict)
+            discriminator.load_state_dict(d_dict)
+        else:
+            ckpt = torch.load(args.pretrain)
 
-        #generator.load_state_dict(g_dict)
-        #discriminator.load_state_dict(d_dict)
-        #g_ema.load_state_dict(ckpt['g_ema'])
+            generator.load_state_dict(ckpt['g'])
+            discriminator.load_state_dict(ckpt['d'])
+            g_ema.load_state_dict(ckpt['g_ema'])
 
-        #g_optim.load_state_dict(ckpt['g_optim'])
-        #d_optim.load_state_dict(ckpt['d_optim'])
-        
-        ckpt = torch.load(args.pretrain)
-
-        generator.load_state_dict(ckpt['g'])
-        discriminator.load_state_dict(ckpt['d'])
-        g_ema.load_state_dict(ckpt['g_ema'])
-            
-        g_optim.load_state_dict(ckpt['g_optim'])
-        d_optim.load_state_dict(ckpt['d_optim'])
+            g_optim.load_state_dict(ckpt['g_optim'])
+            d_optim.load_state_dict(ckpt['d_optim'])
     
     smooth_l1_loss = torch.nn.SmoothL1Loss().to(device)
     id_loss = IDLoss(args.base_dir, device, ckpt_dict=None)
