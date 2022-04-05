@@ -18,9 +18,9 @@ class GFPGAN_degradation(object):
         self.blur_kernel_size = 41
         self.blur_sigma = [0.1, 10]
         self.downsample_range = [0.8, 8]
-        self.noise_range = [0, 12]
-        self.jpeg_range = [70, 100]
-        self.gray_prob = 0.3
+        self.noise_range = [0, 20]
+        self.jpeg_range = [60, 100]
+        self.gray_prob = 0.2
         self.color_jitter_prob = 0.0
         self.color_jitter_pt_prob = 0.0
         self.shift = 20/255.
@@ -75,7 +75,7 @@ class FaceDataset(Dataset):
     def __init__(self, path, resolution=512):
         self.resolution = resolution
 
-        self.HQ_imgs = np.load(path)["images"]
+        self.HQ_imgs = glob.glob(os.path.join(path, '*.*'))
         self.length = len(self.HQ_imgs)
 
         self.degrader = GFPGAN_degradation()
@@ -84,7 +84,7 @@ class FaceDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-        img_gt = self.HQ_imgs[index]
+        img_gt = cv2.imread(self.HQ_imgs[index], cv2.IMREAD_COLOR)
         img_gt = cv2.resize(img_gt, (self.resolution, self.resolution), interpolation=cv2.INTER_AREA)
         
         # BFR degradation
@@ -93,11 +93,10 @@ class FaceDataset(Dataset):
         img_gt = img_gt.astype(np.float32)/255.
         img_gt, img_lq = self.degrader.degrade_process(img_gt)
 
-        img_gt = (torch.from_numpy(img_gt) - 0.5) / 0.5
-        img_lq = (torch.from_numpy(img_lq) - 0.5) / 0.5
+        img_gt =  (torch.from_numpy(img_gt) - 0.5) / 0.5
+        img_lq =  (torch.from_numpy(img_lq) - 0.5) / 0.5
         
         img_gt = img_gt.permute(2, 0, 1).flip(0) # BGR->RGB
         img_lq = img_lq.permute(2, 0, 1).flip(0) # BGR->RGB
 
         return img_lq, img_gt
-
