@@ -25,6 +25,7 @@ from training.data_loader.dataset_face import FaceDataset
 from face_model.gpen_model import FullGenerator, Discriminator
 
 from training.loss.id_loss import IDLoss
+from training.loss.gfpgan_losses import PerceptualLoss, L1Loss
 from distributed import (
     get_rank,
     synchronize,
@@ -83,24 +84,26 @@ def d_r1_loss(real_pred, real_img):
 
 
 def g_nonsaturating_loss(fake_pred, loss_funcs=None, fake_img=None, real_img=None, input_img=None):
-    smooth_l1_loss, id_loss = loss_funcs
+    smooth_l1_loss, id_loss, perceptual_loss = loss_funcs
     
     loss = F.softplus(-fake_pred).mean()
     loss_l1 = smooth_l1_loss(fake_img, real_img)
     loss_id, __, __ = id_loss(fake_img, real_img, input_img)
-    loss += 1.0*loss_l1 + 1.0*loss_id
+    percep, style = perceptual_loss(fake_img, real_img)
+    loss += 1.0*loss_l1 + 1.0*loss_id + 0.5*percep + 0.5*style
 
     return loss
 
 
 def print_losses(fake_pred, loss_funcs=None, fake_img=None, real_img=None, input_img=None):
-    smooth_l1_loss, id_loss = loss_funcs
+    smooth_l1_loss, id_loss, perceptual_loss = loss_funcs
 
     loss = F.softplus(-fake_pred).mean()
     loss_l1 = smooth_l1_loss(fake_img, real_img)
     loss_id, __, __ = id_loss(fake_img, real_img, input_img)
+    percep, style = perceptual_loss(fake_img, real_img)
 
-    print(f"L1 Loss : {loss_l1} ID Loss : {loss_id}")
+    print(f"L1 Loss : {loss_l1} ID Loss : {loss_id} Percep Loss: {percep} Style Loss: {style}")
 
 
 def g_path_regularize(fake_img, latents, mean_path_length, decay=0.01):
@@ -410,9 +413,22 @@ if __name__ == '__main__':
             g_optim.load_state_dict(ckpt['g_optim'])
             d_optim.load_state_dict(ckpt['d_optim'])
     
-    smooth_l1_loss = torch.nn.SmoothL1Loss().to(device)
+    #smooth_l1_loss = torch.nn.SmoothL1Loss().to(device)
+    l1_loss = L1Loss(loss_weight=1, reduction='mean').to(device)
     id_loss = IDLoss(args.base_dir, device, ckpt_dict=None)
     lpips_func = lpips.LPIPS(net='alex',version='0.1').to(device)
+    perceptual_loss = PerceptualLoss(
+        layer_weights={ 'conv1_2': 0.1,
+                       'conv2_2': 0.1,
+                       'conv3_4': 1,
+                       'conv4_4': 1,
+                       'conv5_4': 1 },
+        vgg_type='vgg19',
+        use_input_norm=True,
+        perceptual_weight=1.0,
+        style_weight=50,
+        range_norm=True,
+        criterion='l1').to(device)
     
     if args.distributed:
         generator = nn.parallel.DistributedDataParallel(
@@ -444,5 +460,5 @@ if __name__ == '__main__':
         drop_last=True,
     )
 
-    train(args, loader, generator, discriminator, [smooth_l1_loss, id_loss], g_optim, d_optim, g_ema, lpips_func, device)
+    train(args, loader, generator, discriminator, [l1_loss, id_loss, perceptual_loss], g_optim, d_optim, g_ema, lpips_func, device)
    
