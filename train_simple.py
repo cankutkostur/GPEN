@@ -90,7 +90,7 @@ def g_nonsaturating_loss(fake_pred, loss_funcs=None, fake_img=None, real_img=Non
     loss_l1 = smooth_l1_loss(fake_img, real_img)
     loss_id, __, __ = id_loss(fake_img, real_img, input_img)
     percep, style = perceptual_loss(fake_img, real_img)
-    loss += 1.0*loss_l1 + 1.5*loss_id + 0.5*percep + 0.5*style
+    loss += 1.0*loss_l1 + 5.0*loss_id + 0.5*percep + 0.5*style
 
     return loss
 
