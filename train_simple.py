@@ -90,7 +90,7 @@ def g_nonsaturating_loss(fake_pred, loss_funcs=None, fake_img=None, real_img=Non
     loss_l1 = smooth_l1_loss(fake_img, real_img)
     loss_id, __, __ = id_loss(fake_img, real_img, input_img)
     percep, style = perceptual_loss(fake_img, real_img)
-    loss += 2.0*loss_l1 + 2.0*loss_id + 0.5*percep + 0.1*style
+    loss += 10.0*loss_l1 + 10.0*loss_id + 0.5*percep + 0.3*style
 
     return loss
 
@@ -413,8 +413,8 @@ if __name__ == '__main__':
             g_optim.load_state_dict(ckpt['g_optim'])
             d_optim.load_state_dict(ckpt['d_optim'])
     
-    #smooth_l1_loss = torch.nn.SmoothL1Loss().to(device)
-    l1_loss = L1Loss(loss_weight=1, reduction='mean').to(device)
+    smooth_l1_loss = torch.nn.SmoothL1Loss().to(device)
+    #l1_loss = L1Loss(loss_weight=1, reduction='mean').to(device)
     id_loss = IDLoss(args.base_dir, device, ckpt_dict=None)
     lpips_func = lpips.LPIPS(net='alex',version='0.1').to(device)
     perceptual_loss = PerceptualLoss(
@@ -460,5 +460,5 @@ if __name__ == '__main__':
         drop_last=True,
     )
 
-    train(args, loader, generator, discriminator, [l1_loss, id_loss, perceptual_loss], g_optim, d_optim, g_ema, lpips_func, device)
+    train(args, loader, generator, discriminator, [smooth_l1_loss, id_loss, perceptual_loss], g_optim, d_optim, g_ema, lpips_func, device)
    
